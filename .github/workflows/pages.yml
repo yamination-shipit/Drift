@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -30,16 +28,16 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin gh-pages || true
+          git worktree add /tmp/drift-pages gh-pages || git worktree add --orphan /tmp/drift-pages gh-pages
+          rm -rf /tmp/drift-pages/*
+          cp -R dist/. /tmp/drift-pages/
+          touch /tmp/drift-pages/.nojekyll
+          cd /tmp/drift-pages
+          git add -A
+          git commit -m "deploy: github pages" || exit 0
+          git push origin gh-pages
