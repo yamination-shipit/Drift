@@ -14,12 +14,12 @@ Drift uses pnpm only, with a committed lockfile and hardened install settings.
 
 ## 1.2 Required Settings
 
-| Setting | Purpose |
-| --- | --- |
-| `packageManager` | Pins pnpm for Corepack |
-| `minimumReleaseAge` | Avoids brand-new compromised releases |
-| `blockExoticSubdeps` | Blocks transitive git/tarball dependency surprises |
-| approved build scripts | Keeps dependency lifecycle scripts explicit |
+| Setting                | Purpose                                            |
+| ---------------------- | -------------------------------------------------- |
+| `packageManager`       | Pins pnpm for Corepack                             |
+| `minimumReleaseAge`    | Avoids brand-new compromised releases              |
+| `blockExoticSubdeps`   | Blocks transitive git/tarball dependency surprises |
+| approved build scripts | Keeps dependency lifecycle scripts explicit        |
 
 ## 1.3 Consequences
 

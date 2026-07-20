@@ -14,11 +14,11 @@ Drift uses Prettier and Husky to run cheap local checks before commits.
 
 ## 1.2 Reasons
 
-| Check | Reason |
-| --- | --- |
-| Prettier | Avoids style churn |
+| Check      | Reason                        |
+| ---------- | ----------------------------- |
+| Prettier   | Avoids style churn            |
 | TypeScript | Catches typed domain mistakes |
-| Vitest | Protects pure behavior |
+| Vitest     | Protects pure behavior        |
 
 ## 1.3 Consequences
 

@@ -14,11 +14,11 @@ Drift uses React and TypeScript for maintainable UI composition, while keeping p
 
 ## 1.2 Reasons
 
-| Reason | Impact |
-| --- | --- |
-| User requested React | Easier future maintenance |
-| Scene/mix/timer logic benefits from types | Fewer storage and date bugs |
-| Full clean-architecture layers are unnecessary | Avoids boilerplate |
+| Reason                                         | Impact                      |
+| ---------------------------------------------- | --------------------------- |
+| User requested React                           | Easier future maintenance   |
+| Scene/mix/timer logic benefits from types      | Fewer storage and date bugs |
+| Full clean-architecture layers are unnecessary | Avoids boilerplate          |
 
 ## 1.3 Consequences
 

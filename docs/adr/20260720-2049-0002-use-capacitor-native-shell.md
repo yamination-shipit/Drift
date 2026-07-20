@@ -14,10 +14,10 @@ Drift uses Capacitor for iOS and Android packaging.
 
 ## 1.2 Reasons
 
-| Reason | Impact |
-| --- | --- |
-| Existing app is web-first | Avoids rebuilding native screens |
-| Capacitor supports Vite output | Simple build pipeline |
+| Reason                          | Impact                                        |
+| ------------------------------- | --------------------------------------------- |
+| Existing app is web-first       | Avoids rebuilding native screens              |
+| Capacitor supports Vite output  | Simple build pipeline                         |
 | Native projects remain editable | Allows background-audio permissions and icons |
 
 ## 1.3 Consequences

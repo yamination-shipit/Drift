@@ -14,11 +14,11 @@ Drift organizes React UI as atoms, molecules, organisms, and pages. Storybook is
 
 ## 1.2 Reasons
 
-| Choice | Reason |
-| --- | --- |
-| Atomic folders | Small shared vocabulary for UI composition |
-| Storybook | Tests visual states without booting the whole app |
-| Shallow taxonomy | Avoids abstract layers with no reuse |
+| Choice           | Reason                                            |
+| ---------------- | ------------------------------------------------- |
+| Atomic folders   | Small shared vocabulary for UI composition        |
+| Storybook        | Tests visual states without booting the whole app |
+| Shallow taxonomy | Avoids abstract layers with no reuse              |
 
 ## 1.3 Consequences
 

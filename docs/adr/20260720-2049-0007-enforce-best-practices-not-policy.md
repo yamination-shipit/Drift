@@ -14,12 +14,12 @@ Drift automates small practices that prevent real defects. It avoids process rul
 
 ## 1.2 Guardrails
 
-| Practice | Why It Exists |
-| --- | --- |
-| Format, typecheck, tests | Finds defects before commit |
-| Commitlint | Keeps history useful |
-| ADRs | Records decisions with consequences |
-| pnpm hardening | Reduces supply-chain risk |
+| Practice                 | Why It Exists                       |
+| ------------------------ | ----------------------------------- |
+| Format, typecheck, tests | Finds defects before commit         |
+| Commitlint               | Keeps history useful                |
+| ADRs                     | Records decisions with consequences |
+| pnpm hardening           | Reduces supply-chain risk           |
 
 ## 1.3 Consequences
 

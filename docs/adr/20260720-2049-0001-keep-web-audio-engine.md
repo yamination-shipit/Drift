@@ -14,10 +14,10 @@ Drift keeps its procedural Web Audio API engine. React owns UI state and wiring;
 
 ## 1.2 Reasons
 
-| Reason | Impact |
-| --- | --- |
-| The engine already works | Lowest regression risk |
-| No external audio files | App stays small and offline-friendly |
+| Reason                               | Impact                                  |
+| ------------------------------------ | --------------------------------------- |
+| The engine already works             | Lowest regression risk                  |
+| No external audio files              | App stays small and offline-friendly    |
 | Web Audio works in Capacitor WebView | One engine serves web, iOS, and Android |
 
 ## 1.3 Consequences

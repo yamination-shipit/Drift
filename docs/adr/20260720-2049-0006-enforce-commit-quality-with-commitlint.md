@@ -14,10 +14,10 @@ Drift uses commitlint to enforce readable Conventional Commit messages. Intermed
 
 ## 1.2 Rules
 
-| Rule | Reason |
-| --- | --- |
-| Conventional Commit type | Keeps history searchable |
-| Imperative summary | Keeps PR titles readable |
+| Rule                     | Reason                                          |
+| ------------------------ | ----------------------------------------------- |
+| Conventional Commit type | Keeps history searchable                        |
+| Imperative summary       | Keeps PR titles readable                        |
 | Optional leading gitmoji | Matches requested workflow without requiring it |
 
 ## 1.3 Consequences
