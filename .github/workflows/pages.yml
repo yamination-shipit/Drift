@@ -33,7 +33,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin gh-pages || true
-          git worktree add /tmp/drift-pages gh-pages || git worktree add --orphan /tmp/drift-pages gh-pages
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git worktree add -b gh-pages /tmp/drift-pages origin/gh-pages
+          else
+            git worktree add --orphan -b gh-pages /tmp/drift-pages
+          fi
           rm -rf /tmp/drift-pages/*
           cp -R dist/. /tmp/drift-pages/
           touch /tmp/drift-pages/.nojekyll
