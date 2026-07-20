@@ -1,6 +1,13 @@
 packages:
   - .
 
+engineStrict: true
+strictPeerDependencies: true
+autoInstallPeers: false
+resolutionMode: highest
+nodeLinker: hoisted
 minimumReleaseAge: 1440
 blockExoticSubdeps: true
-onlyBuiltDependencies: []
+strictDepBuilds: true
+allowBuilds:
+  esbuild: true
