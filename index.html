@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift — Ambient Sound</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0D12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Drift">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#0A0D12;
+    --bg-1:#12171F;
+    --bg-2:#171D26;
+    --line:rgba(255,255,255,0.08);
+    --ink-0:#F2EFE8;
+    --ink-1:#B7BEC9;
+    --ink-2:#7C8593;
+    --accent:#4FA8C9;
+    --accent-soft: rgba(79,168,201,0.35);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(90% 60% at 50% -10%, rgba(79,168,201,0.10), transparent 60%),
+      var(--bg-0);
+    color:var(--ink-0);
+    font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height:100%;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 40px;
+  }
+  .app{ width:100%; max-width:460px; }
+  .eyebrow{
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--ink-2); font-weight:700; text-align:center; margin-bottom:6px;
+  }
+  h1{
+    font-family:'Fraunces', Georgia, serif; font-weight:600; font-optical-sizing:auto;
+    font-size:40px; text-align:center; margin:0 0 4px; letter-spacing:-0.01em;
+  }
+  .subtitle{ text-align:center; color:var(--ink-2); font-size:13.5px; margin:0 0 30px; line-height:1.5; }
+
+  .orb-wrap{ display:flex; flex-direction:column; align-items:center; margin-bottom:28px; }
+  .orb-stage{ position:relative; width:196px; height:196px; display:flex; align-items:center; justify-content:center; }
+  .orb-ring{
+    position:absolute; inset:0; border-radius:50%; border:1px solid var(--accent-soft);
+    opacity:0.55; transition:border-color 0.6s ease, opacity 0.6s ease;
+  }
+  .orb-ring.r2{ inset:20px; opacity:0.4; }
+  .orb-core{
+    width:108px; height:108px; border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,0.35), var(--accent) 65%, rgba(0,0,0,0.2) 100%);
+    box-shadow:0 0 40px 6px var(--accent-soft);
+    transform:scale(1);
+    transition:background 0.6s ease, box-shadow 0.15s linear;
+  }
+  .now-playing{ margin-top:16px; font-size:13px; color:var(--ink-1); text-align:center; min-height:18px; }
+  .now-playing b{ color:var(--ink-0); font-weight:700; }
+
+  .section-label{
+    font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--ink-2); font-weight:700; margin:0 0 10px 2px;
+  }
+  .scenes{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:22px; }
+  .scene-card{
+    position:relative; background:var(--bg-1); border:1px solid var(--line); border-radius:14px;
+    padding:14px; cursor:pointer; text-align:left; color:var(--ink-0); font-family:inherit;
+    transition:border-color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+  }
+  .scene-card:active{ transform:scale(0.98); }
+  .scene-card.active{
+    background:var(--bg-2); border-color:var(--card-accent, var(--accent));
+    box-shadow:0 0 0 1px var(--card-accent, var(--accent)) inset;
+  }
+  .scene-card.add-sound{ border-style:dashed; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:96px; color:var(--ink-2); }
+  .scene-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+  .scene-icon{ font-size:20px; line-height:1; }
+  .scene-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-2); transition:background 0.25s ease, box-shadow 0.25s ease; }
+  .scene-card.active .scene-dot{ background:var(--card-accent, var(--accent)); box-shadow:0 0 8px 1px var(--card-accent, var(--accent)); }
+  .scene-name{ font-size:13.5px; font-weight:700; margin-top:8px; }
+  .scene-sub{ font-size:10.5px; color:var(--ink-2); margin-top:2px; }
+  .scene-vol, .scene-extra{
+    margin-top:10px; width:100%; opacity:0; max-height:0; overflow:hidden;
+    transition:opacity 0.25s ease, max-height 0.25s ease; pointer-events:none;
+  }
+  .scene-vol{ accent-color:var(--card-accent, var(--accent)); height:16px; }
+  .scene-card.active .scene-vol, .scene-card.active .scene-extra{ opacity:1; max-height:30px; pointer-events:auto; }
+  .scene-extra select{
+    width:100%; background:var(--bg-0); color:var(--ink-0); border:1px solid var(--line);
+    border-radius:8px; padding:5px 6px; font-family:inherit; font-size:11.5px;
+  }
+  .status-text{ font-size:11px; color:var(--ink-2); text-align:center; margin-top:2px; }
+
+  hr.divider{ border:none; border-top:1px solid var(--line); margin:22px 0; }
+
+  .mix-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .mix-row input[type="text"]{
+    flex:1; background:var(--bg-1); border:1px solid var(--line); color:var(--ink-0);
+    font-family:inherit; border-radius:10px; padding:9px 12px; font-size:13px;
+  }
+  .mix-row button{
+    background:var(--bg-1); border:1px solid var(--line); color:var(--ink-1);
+    font-family:inherit; font-weight:700; font-size:12.5px; padding:9px 14px; border-radius:10px; cursor:pointer;
+  }
+  .mix-list{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .mix-chip{
+    display:flex; align-items:center; gap:6px; background:var(--bg-1); border:1px solid var(--line);
+    border-radius:999px; padding:6px 8px 6px 13px; font-size:12.5px; color:var(--ink-1);
+  }
+  .mix-chip button{
+    background:none; border:none; color:var(--ink-2); font-size:11px; cursor:pointer;
+    width:20px; height:20px; border-radius:50%; line-height:1;
+  }
+  .mix-chip button:hover{ color:var(--ink-0); background:var(--bg-2); }
+  .mix-chip .load{ background:none; border:none; color:inherit; font:inherit; font-weight:700; cursor:pointer; padding:0; }
+  .mix-empty{ font-size:12px; color:var(--ink-2); margin-bottom:22px; }
+
+  .timer-presets{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .pill{
+    border:1px solid var(--line); background:var(--bg-1); color:var(--ink-1); font-family:inherit;
+    font-size:12.5px; font-weight:600; padding:8px 13px; border-radius:999px; cursor:pointer; transition:all 0.2s ease;
+  }
+  .pill:hover{ border-color:var(--ink-2); color:var(--ink-0); }
+  .pill.selected{ background:var(--accent); border-color:var(--accent); color:#08131A; }
+  .until-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; color:var(--ink-1); font-size:13px; }
+  .until-row input[type="time"]{
+    background:var(--bg-1); border:1px solid var(--line); color:var(--ink-0); font-family:inherit;
+    border-radius:8px; padding:7px 9px; font-size:13px;
+  }
+  .wake-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-1); margin-bottom:10px; }
+  .wake-row input{ accent-color:var(--accent); }
+  .timer-status{
+    display:flex; align-items:center; justify-content:space-between; background:var(--bg-1);
+    border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-top:8px;
+  }
+  .timer-status .label{ font-size:12px; color:var(--ink-2); }
+  .timer-status .value{ font-family:'Fraunces', serif; font-size:19px; font-weight:600; }
+  .link-btn{ background:none; border:none; color:var(--ink-2); font-family:inherit; font-size:12px; font-weight:700; text-decoration:underline; cursor:pointer; }
+
+  .master{ display:flex; align-items:center; gap:14px; margin-top:22px; }
+  .play-btn{
+    width:56px; height:56px; border-radius:50%; border:none; background:var(--accent); color:#08131A;
+    font-size:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    transition:transform 0.15s ease, background 0.3s ease;
+  }
+  .play-btn:active{ transform:scale(0.94); }
+  .master-vol{ flex:1; }
+  .master-vol label{ display:block; font-size:11px; color:var(--ink-2); margin-bottom:6px; letter-spacing:0.05em; text-transform:uppercase; font-weight:700; }
+  input[type="range"]{ width:100%; accent-color:var(--accent); }
+  .stop-all{
+    background:none; border:1px solid var(--line); color:var(--ink-2); font-family:inherit; font-size:12px;
+    font-weight:600; padding:8px 12px; border-radius:10px; cursor:pointer; flex-shrink:0;
+  }
+  .stop-all:hover{ color:var(--ink-0); border-color:var(--ink-2); }
+
+  .build-stamp{ text-align:center; color:var(--ink-2); font-size:10.5px; margin-top:26px; letter-spacing:0.04em; }
+
+  button:focus-visible, .scene-card:focus-visible, input:focus-visible, select:focus-visible{
+    outline:2px solid var(--ink-0); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){ .orb-core, .orb-ring{ transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="eyebrow">Soundscapes</div>
+  <h1>Drift</h1>
+  <p class="subtitle">Layer real-world sound. Play on loop, or set it to fade out and stop on its own.</p>
+
+  <div class="orb-wrap">
+    <div class="orb-stage">
+      <div class="orb-ring r2"></div>
+      <div class="orb-ring r1"></div>
+      <div class="orb-core" id="orbCore"></div>
+    </div>
+    <div class="now-playing" id="nowPlaying">Silence — pick a sound below</div>
+  </div>
+
+  <div class="section-label">Sounds</div>
+  <div class="scenes" id="scenes"></div>
+  <input type="file" id="fileInput" accept="audio/*" style="display:none;">
+  <div class="status-text" id="uploadStatus"></div>
+
+  <div class="section-label">Saved Mixes</div>
+  <div class="mix-row">
+    <input type="text" id="mixName" placeholder="Name this mix (e.g. Bedtime)" maxlength="30">
+    <button id="saveMixBtn">Save</button>
+  </div>
+  <div class="mix-list" id="mixList"></div>
+
+  <hr class="divider">
+
+  <div class="section-label">Timer</div>
+  <div class="timer-presets" id="presets"></div>
+  <div class="until-row">
+    <span>or play until</span>
+    <input type="time" id="untilTime">
+    <button class="pill" id="setUntilBtn">Set</button>
+  </div>
+  <label class="wake-row"><input type="checkbox" id="wakeChime">End with a gentle chime instead of silence</label>
+  <div class="timer-status" id="timerStatus" style="display:none;">
+    <div>
+      <div class="label">Stopping in</div>
+      <div class="value" id="countdown">--:--</div>
+    </div>
+    <button class="link-btn" id="cancelTimer">Cancel</button>
+  </div>
+
+  <hr class="divider">
+
+  <div class="master">
+    <button class="play-btn" id="playBtn" aria-label="Play or pause">▶</button>
+    <div class="master-vol">
+      <label for="masterVol">Master Volume</label>
+      <input type="range" id="masterVol" min="0" max="100" value="80">
+    </div>
+    <button class="stop-all" id="stopAll">Stop&nbsp;all</button>
+  </div>
+
+  <div class="build-stamp">Drift · build v1.2-pwa</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Scene definitions ----------
+  const BASE_SCENES = [
+    { id:'ocean', name:'Ocean Waves', icon:'🌊', color:'#4FA8C9' },
+    { id:'rain',  name:'Rainfall',    icon:'🌧️', color:'#6C93B3' },
+    { id:'forest',name:'Forest',      icon:'🌲', color:'#6FA37A' },
+    { id:'cafe',  name:'Coffee Shop', icon:'☕', color:'#C9975B' },
+    { id:'fire',  name:'Fireplace',   icon:'🔥', color:'#D97757' },
+    { id:'fan',   name:'White Noise', icon:'🌀', color:'#9AA5B1' },
+    { id:'focus', name:'Focus Tone',  icon:'🎧', color:'#9B8AC4', type:'focus', sub:'binaural · headphones' },
+  ];
+  const customScenes = []; // scenes added via file upload, this session only
+  function allScenes(){ return BASE_SCENES.concat(customScenes); }
+
+  const FOCUS_BANDS = [
+    { hz:2,  label:'Delta · 2Hz (deep rest)' },
+    { hz:6,  label:'Theta · 6Hz (relax)' },
+    { hz:10, label:'Alpha · 10Hz (calm focus)' },
+    { hz:18, label:'Beta · 18Hz (alertness)' },
+  ];
+  let focusBeatHz = 6;
+
+  // ---------- Audio engine ----------
+  let ctx = null, masterGain = null, analyser = null, analyserData = null;
+  const active = {};            // id -> { sceneGain, handle }
+  const volumes = {};           // id -> 0..1, remembered across toggles
+  BASE_SCENES.forEach(s => volumes[s.id] = 0.7);
+  let masterTarget = 0.8;
+  let playing = false;
+
+  function ensureCtx(){
+    if(!ctx){
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = ctx.createGain();
+      masterGain.gain.value = 0;
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      analyserData = new Uint8Array(analyser.frequencyBinCount);
+      masterGain.connect(analyser);
+      analyser.connect(ctx.destination);
+    }
+    if(ctx.state === 'suspended') ctx.resume();
+  }
+
+  function createNoiseBuffer(seconds, type){
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    if(type === 'white'){
+      for(let i=0;i<len;i++) data[i] = Math.random()*2-1;
+    } else if(type === 'pink'){
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      for(let i=0;i<len;i++){
+        const w = Math.random()*2-1;
+        b0=0.99886*b0+w*0.0555179;
+        b1=0.99332*b1+w*0.0750759;
+        b2=0.96900*b2+w*0.1538520;
+        b3=0.86650*b3+w*0.3104856;
+        b4=0.55000*b4+w*0.5329522;
+        b5=-0.7616*b5-w*0.0168980;
+        let pink = b0+b1+b2+b3+b4+b5+b6+w*0.5362;
+        b6 = w*0.115926;
+        data[i] = pink*0.11;
+      }
+    } else {
+      let last=0;
+      for(let i=0;i<len;i++){
+        const w = Math.random()*2-1;
+        data[i] = (last + 0.02*w)/1.02;
+        last = data[i];
+        data[i]*=3.5;
+      }
+    }
+    return buffer;
+  }
+
+  function noiseSource(type){
+    const src = ctx.createBufferSource();
+    src.buffer = createNoiseBuffer(4, type);
+    src.loop = true;
+    return src;
+  }
+
+  function playPercussive(dest, opts){
+    const o = Object.assign({freqMin:1500,freqMax:4000,q:8,peak:0.25,dur:0.15}, opts);
+    const now = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = createNoiseBuffer(o.dur, 'white');
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = o.freqMin + Math.random()*(o.freqMax-o.freqMin);
+    bp.Q.value = o.q;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(o.peak, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now+o.dur);
+    src.connect(bp); bp.connect(g); g.connect(dest);
+    src.start(now); src.stop(now+o.dur+0.02);
+  }
+
+  function playChirp(dest){
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    const f0 = 2000 + Math.random()*1500;
+    osc.frequency.setValueAtTime(f0, now);
+    osc.frequency.exponentialRampToValueAtTime(f0*1.4, now+0.08);
+    osc.frequency.exponentialRampToValueAtTime(f0*0.8, now+0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.15, now+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now+0.28);
+    osc.connect(g); g.connect(dest);
+    osc.start(now); osc.stop(now+0.3);
+  }
+
+  // FIX: previously this called the step function immediately to compute a
+  // "first delay", then tried to call that number as a function -> threw a
+  // TypeError as soon as any scene other than ocean/fan (which don't use this)
+  // was toggled on. Now firstDelayMs is a plain number and stepFn is only
+  // ever invoked from inside the timeout.
+  function timedLoop(stepFn, firstDelayMs){
+    let stopped = false;
+    let handle = null;
+    function scheduleNext(delayMs){
+      handle = setTimeout(()=>{
+        if(stopped) return;
+        const nextDelay = stepFn();
+        scheduleNext(nextDelay);
+      }, delayMs);
+    }
+    scheduleNext(firstDelayMs);
+    return { stop(){ stopped = true; if(handle) clearTimeout(handle); } };
+  }
+
+  const BUILDERS = {
+    ocean(out){
+      const src = noiseSource('brown');
+      const filter = ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=700; filter.Q.value=0.7;
+      const gain = ctx.createGain(); gain.gain.value = 0;
+      const lfo1 = ctx.createOscillator(); lfo1.frequency.value = 0.08;
+      const lfo1Gain = ctx.createGain(); lfo1Gain.gain.value = 350;
+      lfo1.connect(lfo1Gain).connect(filter.frequency);
+      const lfo2 = ctx.createOscillator(); lfo2.frequency.value = 0.06;
+      const lfo2Gain = ctx.createGain(); lfo2Gain.gain.value = 0.28;
+      const base = ctx.createConstantSource(); base.offset.value = 0.6;
+      lfo2.connect(lfo2Gain).connect(gain.gain);
+      base.connect(gain.gain);
+      src.connect(filter).connect(gain).connect(out);
+      [src,lfo1,lfo2,base].forEach(n=>n.start());
+      return { stop(){ [src,lfo1,lfo2,base].forEach(n=>{try{n.stop();}catch(e){}}); } };
+    },
+    rain(out){
+      const src = noiseSource('white');
+      const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1100;
+      const peak = ctx.createBiquadFilter(); peak.type='peaking'; peak.frequency.value=4500; peak.Q.value=0.9; peak.gain.value=6;
+      const gain = ctx.createGain(); gain.gain.value = 0.35;
+      src.connect(hp).connect(peak).connect(gain).connect(out);
+      src.start();
+      const loop = timedLoop(()=>{ playPercussive(out,{freqMin:1800,freqMax:3500,q:12,peak:0.1,dur:0.1}); return 400+Math.random()*1400; }, 500);
+      return { stop(){ try{src.stop();}catch(e){} loop.stop(); } };
+    },
+    forest(out){
+      const src = noiseSource('pink');
+      const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1800;
+      const gain = ctx.createGain(); gain.gain.value = 0.22;
+      src.connect(lp).connect(gain).connect(out);
+      src.start();
+      const loop = timedLoop(()=>{
+        playChirp(out);
+        if(Math.random()<0.4) setTimeout(()=>playChirp(out), 150+Math.random()*250);
+        return 3500+Math.random()*8500;
+      }, 2500);
+      return { stop(){ try{src.stop();}catch(e){} loop.stop(); } };
+    },
+    cafe(out){
+      const src = noiseSource('pink');
+      const bp = ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=900; bp.Q.value=0.5;
+      const gain = ctx.createGain(); gain.gain.value = 0.3;
+      src.connect(bp).connect(gain).connect(out);
+      src.start();
+      const loop = timedLoop(()=>{ playPercussive(out,{freqMin:2500,freqMax:6000,q:10,peak:0.16,dur:0.12}); return 1500+Math.random()*4000; }, 1200);
+      return { stop(){ try{src.stop();}catch(e){} loop.stop(); } };
+    },
+    fire(out){
+      const src = noiseSource('brown');
+      const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=400;
+      const gain = ctx.createGain(); gain.gain.value = 0.35;
+      src.connect(lp).connect(gain).connect(out);
+      src.start();
+      const loop = timedLoop(()=>{ playPercussive(out,{freqMin:600,freqMax:3200,q:9,peak:0.2,dur:0.07}); return 150+Math.random()*500; }, 300);
+      return { stop(){ try{src.stop();}catch(e){} loop.stop(); } };
+    },
+    fan(out){
+      const src = noiseSource('white');
+      const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3500;
+      const gain = ctx.createGain(); gain.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 3.2;
+      const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.03;
+      const base = ctx.createConstantSource(); base.offset.value = 0.22;
+      lfo.connect(lfoGain).connect(gain.gain);
+      base.connect(gain.gain);
+      src.connect(lp).connect(gain).connect(out);
+      [src,lfo,base].forEach(n=>n.start());
+      return { stop(){ [src,lfo,base].forEach(n=>{try{n.stop();}catch(e){}}); } };
+    },
+    focus(out){
+      const carrier = 200;
+      const oscL = ctx.createOscillator(); oscL.type='sine'; oscL.frequency.value = carrier;
+      const oscR = ctx.createOscillator(); oscR.type='sine'; oscR.frequency.value = carrier + focusBeatHz;
+      const panL = ctx.createStereoPanner(); panL.pan.value = -1;
+      const panR = ctx.createStereoPanner(); panR.pan.value = 1;
+      const gL = ctx.createGain(); gL.gain.value = 0.18;
+      const gR = ctx.createGain(); gR.gain.value = 0.18;
+      oscL.connect(gL).connect(panL).connect(out);
+      oscR.connect(gR).connect(panR).connect(out);
+      oscL.start(); oscR.start();
+      return {
+        stop(){ try{oscL.stop();}catch(e){} try{oscR.stop();}catch(e){} },
+        setBeat(hz){ oscR.frequency.setTargetAtTime(carrier+hz, ctx.currentTime, 0.3); }
+      };
+    }
+  };
+
+  function playChime(){
+    ensureCtx();
+    const now = ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 987.77];
+    notes.forEach((f,i)=>{
+      const t = now + i*0.9;
+      const osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.value=f;
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, t);
+      ng.gain.linearRampToValueAtTime(0.12, t+0.15);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t+1.4);
+      osc.connect(ng); ng.connect(ctx.destination);
+      osc.start(t); osc.stop(t+1.5);
+    });
+  }
+
+  function toggleScene(id){
+    ensureCtx();
+    if(active[id]){
+      const { sceneGain, handle } = active[id];
+      const now = ctx.currentTime;
+      sceneGain.gain.cancelScheduledValues(now);
+      sceneGain.gain.setValueAtTime(sceneGain.gain.value, now);
+      sceneGain.gain.linearRampToValueAtTime(0, now+0.4);
+      setTimeout(()=>{ handle.stop(); sceneGain.disconnect(); }, 450);
+      delete active[id];
+    } else {
+      if(!BUILDERS[id]) return;
+      const sceneGain = ctx.createGain();
+      sceneGain.gain.value = 0;
+      sceneGain.connect(masterGain);
+      const handle = BUILDERS[id](sceneGain);
+      const now = ctx.currentTime;
+      sceneGain.gain.linearRampToValueAtTime(volumes[id] ?? 0.7, now+0.8);
+      active[id] = { sceneGain, handle };
+      if(!playing) setPlaying(true);
+    }
+    renderScenes();
+    renderNowPlaying();
+    renderOrbColor();
+  }
+
+  function setSceneVolume(id, v){
+    volumes[id] = v;
+    if(active[id]) active[id].sceneGain.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
+  }
+
+  function stopAllScenes(){
+    Object.keys(active).forEach(id=>{
+      active[id].handle.stop();
+      active[id].sceneGain.disconnect();
+      delete active[id];
+    });
+    renderScenes();
+    renderNowPlaying();
+    renderOrbColor();
+  }
+
+  function setPlaying(v){
+    playing = v;
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    masterGain.gain.cancelScheduledValues(now);
+    masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+    masterGain.gain.linearRampToValueAtTime(v ? masterTarget : 0, now + 0.6);
+    document.getElementById('playBtn').textContent = v ? '❚❚' : '▶';
+    if('mediaSession' in navigator) navigator.mediaSession.playbackState = v ? 'playing' : 'paused';
+    if(v) requestWakeLock(); else releaseWakeLock();
+  }
+
+  // ---------- Wake Lock: keeps the screen from sleeping while playing,
+  // which is what keeps audio + the lock-screen controls alive on most
+  // mobile browsers when this is installed as a PWA. ----------
+  let wakeLock = null;
+  async function requestWakeLock(){
+    if(!('wakeLock' in navigator)) return;
+    try{ wakeLock = await navigator.wakeLock.request('screen'); }
+    catch(e){ /* not available right now, e.g. tab backgrounded — safe to ignore */ }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible' && playing) requestWakeLock();
+  });
+
+  // ---------- UI: scenes ----------
+  const scenesEl = document.getElementById('scenes');
+  function renderScenes(){
+    scenesEl.innerHTML = '';
+    allScenes().forEach(s=>{
+      const isActive = !!active[s.id];
+      const card = document.createElement('button');
+      card.className = 'scene-card' + (isActive ? ' active' : '');
+      card.style.setProperty('--card-accent', s.color);
+      let extra = '';
+      if(s.type === 'focus'){
+        extra = `<select class="focus-band">${FOCUS_BANDS.map(b=>`<option value="${b.hz}" ${b.hz===focusBeatHz?'selected':''}>${b.label}</option>`).join('')}</select>`;
+      }
+      card.innerHTML = `
+        <div class="scene-top">
+          <span class="scene-icon">${s.icon}</span>
+          <span class="scene-dot"></span>
+        </div>
+        <div class="scene-name">${s.name}</div>
+        ${s.sub ? `<div class="scene-sub">${s.sub}</div>` : ''}
+        <input type="range" class="scene-vol" min="0" max="100" value="${Math.round((volumes[s.id] ?? 0.7)*100)}">
+        <div class="scene-extra">${extra}</div>
+      `;
+      card.addEventListener('click', (e)=>{
+        if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        toggleScene(s.id);
+      });
+      const volInput = card.querySelector('.scene-vol');
+      volInput.addEventListener('input', (e)=> setSceneVolume(s.id, e.target.value/100));
+      volInput.addEventListener('click', e=>e.stopPropagation());
+      const bandSelect = card.querySelector('.focus-band');
+      if(bandSelect){
+        bandSelect.addEventListener('click', e=>e.stopPropagation());
+        bandSelect.addEventListener('change', e=>{
+          focusBeatHz = Number(e.target.value);
+          if(active.focus) active.focus.handle.setBeat(focusBeatHz);
+        });
+      }
+      scenesEl.appendChild(card);
+    });
+
+    const addCard = document.createElement('button');
+    addCard.className = 'scene-card add-sound';
+    addCard.innerHTML = `<span class="scene-icon">＋</span><div class="scene-name">Your Sound</div>`;
+    addCard.addEventListener('click', ()=> document.getElementById('fileInput').click());
+    scenesEl.appendChild(addCard);
+  }
+
+  function renderNowPlaying(){
+    const ids = Object.keys(active);
+    const el = document.getElementById('nowPlaying');
+    if(ids.length === 0){
+      el.innerHTML = 'Silence — pick a sound below';
+      if('mediaSession' in navigator) navigator.mediaSession.metadata = null;
+      return;
+    }
+    const names = ids.map(id => (allScenes().find(s=>s.id===id) || {name:id}).name);
+    el.innerHTML = 'Playing <b>' + names.join(' + ') + '</b>';
+    if('mediaSession' in navigator){
+      navigator.mediaSession.metadata = new MediaMetadata({ title: names.join(' + '), artist: 'Drift' });
+    }
+  }
+
+  function hexToRgb(hex){ const n = parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+  function renderOrbColor(){
+    const ids = Object.keys(active);
+    const root = document.documentElement;
+    if(ids.length === 0){
+      root.style.setProperty('--accent', '#4FA8C9');
+      root.style.setProperty('--accent-soft', 'rgba(79,168,201,0.35)');
+      return;
+    }
+    let r=0,g=0,b=0;
+    ids.forEach(id=>{
+      const scene = allScenes().find(s=>s.id===id);
+      const [rr,gg,bb] = hexToRgb(scene ? scene.color : '#4FA8C9');
+      r+=rr; g+=gg; b+=bb;
+    });
+    r=Math.round(r/ids.length); g=Math.round(g/ids.length); b=Math.round(b/ids.length);
+    root.style.setProperty('--accent', `rgb(${r},${g},${b})`);
+    root.style.setProperty('--accent-soft', `rgba(${r},${g},${b},0.35)`);
+  }
+
+  // ---------- Orb amplitude animation ----------
+  const orbCore = document.getElementById('orbCore');
+  function animate(){
+    requestAnimationFrame(animate);
+    if(!analyser || !playing){ orbCore.style.transform = 'scale(1)'; return; }
+    analyser.getByteFrequencyData(analyserData);
+    let sum=0;
+    for(let i=0;i<analyserData.length;i++) sum+=analyserData[i];
+    const avg = sum/analyserData.length/255;
+    const scale = 1 + Math.min(avg*0.9, 0.35);
+    orbCore.style.transform = `scale(${scale.toFixed(3)})`;
+  }
+  animate();
+
+  // ---------- Master controls ----------
+  document.getElementById('playBtn').addEventListener('click', ()=>{ ensureCtx(); setPlaying(!playing); });
+  document.getElementById('masterVol').addEventListener('input', (e)=>{
+    masterTarget = e.target.value/100;
+    if(playing && ctx) masterGain.gain.setTargetAtTime(masterTarget, ctx.currentTime, 0.05);
+  });
+  document.getElementById('stopAll').addEventListener('click', ()=>{ stopAllScenes(); setPlaying(false); });
+
+  if('mediaSession' in navigator){
+    navigator.mediaSession.setActionHandler('play', ()=>setPlaying(true));
+    navigator.mediaSession.setActionHandler('pause', ()=>setPlaying(false));
+  }
+
+  // ---------- Custom sound upload ----------
+  const fileInput = document.getElementById('fileInput');
+  const uploadStatus = document.getElementById('uploadStatus');
+  fileInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    ensureCtx();
+    uploadStatus.textContent = 'Reading ' + file.name + '…';
+    try{
+      const arrayBuf = await file.arrayBuffer();
+      const audioBuf = await ctx.decodeAudioData(arrayBuf);
+      const id = 'custom-' + Date.now();
+      const name = file.name.length > 22 ? file.name.slice(0,19)+'…' : file.name;
+      customScenes.push({ id, name, icon:'📁', color:'#8C8C9A' });
+      volumes[id] = 0.7;
+      BUILDERS[id] = function(out){
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuf; src.loop = true;
+        src.connect(out); src.start();
+        return { stop(){ try{src.stop();}catch(err){} } };
+      };
+      uploadStatus.textContent = 'Added "' + name + '"';
+      renderScenes();
+      toggleScene(id);
+    } catch(err){
+      uploadStatus.textContent = "Couldn't read that audio file.";
+    }
+    fileInput.value = '';
+  });
+
+  // ---------- Saved mixes (persisted via window.storage) ----------
+  const mixListEl = document.getElementById('mixList');
+  let savedMixes = [];
+
+  async function loadMixes(){
+    try{
+      const res = await window.storage.get('drift-mixes', false);
+      savedMixes = res ? JSON.parse(res.value) : [];
+    } catch(e){ savedMixes = []; }
+    renderMixes();
+  }
+  async function persistMixes(){
+    try{ await window.storage.set('drift-mixes', JSON.stringify(savedMixes), false); }
+    catch(e){ console.error('Could not save mixes', e); }
+  }
+
+  function renderMixes(){
+    mixListEl.innerHTML = '';
+    if(savedMixes.length === 0){
+      const p = document.createElement('div');
+      p.className = 'mix-empty';
+      p.textContent = 'No saved mixes yet — turn on a sound (or a few) and save it.';
+      mixListEl.appendChild(p);
+      return;
+    }
+    savedMixes.forEach((mix, idx)=>{
+      const chip = document.createElement('div');
+      chip.className = 'mix-chip';
+      chip.innerHTML = `<button class="load">${mix.name}</button><button class="del" aria-label="Delete">×</button>`;
+      chip.querySelector('.load').addEventListener('click', ()=> loadMix(mix));
+      chip.querySelector('.del').addEventListener('click', ()=>{
+        savedMixes.splice(idx,1);
+        persistMixes();
+        renderMixes();
+      });
+      mixListEl.appendChild(chip);
+    });
+  }
+
+  function loadMix(mix){
+    ensureCtx();
+    stopAllScenes();
+    masterTarget = mix.masterVol ?? 0.8;
+    document.getElementById('masterVol').value = Math.round(masterTarget*100);
+    Object.keys(mix.scenes).forEach(id=>{
+      if(!BUILDERS[id]) return; // e.g. a custom upload from a past session
+      volumes[id] = mix.scenes[id];
+    });
+    Object.keys(mix.scenes).forEach(id=>{
+      if(BUILDERS[id]) toggleScene(id);
+    });
+  }
+
+  document.getElementById('saveMixBtn').addEventListener('click', ()=>{
+    const ids = Object.keys(active);
+    if(ids.length === 0){ uploadStatus.textContent = 'Turn on a sound first, then save it.'; return; }
+    const nameInput = document.getElementById('mixName');
+    const name = (nameInput.value || 'Untitled mix').trim().slice(0,30);
+    const scenes = {};
+    ids.forEach(id => scenes[id] = volumes[id]);
+    savedMixes.push({ name, scenes, masterVol: masterTarget, createdAt: Date.now() });
+    persistMixes();
+    renderMixes();
+    nameInput.value = '';
+  });
+
+  // ---------- Timer ----------
+  const presetsEl = document.getElementById('presets');
+  const PRESETS = [15,30,45,60,90,120];
+  let deadline = null;
+  let countdownId = null;
+  let fadeStarted = false;
+
+  PRESETS.forEach(min=>{
+    const btn = document.createElement('button');
+    btn.className = 'pill';
+    btn.textContent = min >= 60 ? (min/60)+'h' : min+'m';
+    btn.addEventListener('click', ()=> startTimer(min*60*1000, btn));
+    presetsEl.appendChild(btn);
+  });
+  const untilBtn = document.getElementById('setUntilBtn');
+  untilBtn.addEventListener('click', ()=>{
+    const val = document.getElementById('untilTime').value;
+    if(!val) return;
+    const [h,m] = val.split(':').map(Number);
+    const now = new Date();
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    if(target <= now) target.setDate(target.getDate()+1);
+    startTimer(target - now, untilBtn);
+  });
+
+  function clearPresetSelection(){
+    presetsEl.querySelectorAll('.pill').forEach(b=>b.classList.remove('selected'));
+    untilBtn.classList.remove('selected');
+  }
+
+  function startTimer(ms, sourceBtn){
+    clearPresetSelection();
+    if(sourceBtn) sourceBtn.classList.add('selected');
+    deadline = Date.now() + ms;
+    fadeStarted = false;
+    document.getElementById('timerStatus').style.display = 'flex';
+    if(countdownId) clearInterval(countdownId);
+    countdownId = setInterval(tickCountdown, 250);
+    tickCountdown();
+  }
+
+  function cancelTimer(){
+    deadline = null;
+    fadeStarted = false;
+    if(countdownId) clearInterval(countdownId);
+    document.getElementById('timerStatus').style.display = 'none';
+    clearPresetSelection();
+  }
+  document.getElementById('cancelTimer').addEventListener('click', cancelTimer);
+
+  function tickCountdown(){
+    if(!deadline) return;
+    const remaining = deadline - Date.now();
+    if(remaining <= 0){
+      clearInterval(countdownId);
+      document.getElementById('timerStatus').style.display = 'none';
+      clearPresetSelection();
+      setPlaying(false);
+      const wantsChime = document.getElementById('wakeChime').checked;
+      setTimeout(()=>{
+        stopAllScenes();
+        if(wantsChime) playChime();
+      }, 650);
+      deadline = null;
+      return;
+    }
+    if(remaining <= 15000 && !fadeStarted){
+      fadeStarted = true;
+      setPlaying(false);
+    }
+    const totalSec = Math.ceil(remaining/1000);
+    const h = Math.floor(totalSec/3600);
+    const m = Math.floor((totalSec%3600)/60);
+    const s = totalSec%60;
+    document.getElementById('countdown').textContent =
+      (h>0 ? h+':'+String(m).padStart(2,'0') : m) + ':' + String(s).padStart(2,'0');
+  }
+
+  // ---------- Init ----------
+  renderScenes();
+  renderNowPlaying();
+  loadMixes();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
