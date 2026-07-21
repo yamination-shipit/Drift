@@ -1,4 +1,4 @@
-const CACHE_NAME = 'drift-v1.2';
+const CACHE_NAME = 'drift-v1.3';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -22,8 +22,13 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Cache-first for the app shell, network-first fallback for built assets and fonts.
+// Fresh navigations pick up deployments; assets remain available offline.
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match('./index.html')));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
