@@ -1,4 +1,5 @@
 import type { SceneId } from '../domain/scenes';
+import { fillNoise, type NoiseType } from './noise';
 
 type AudioContextCtor = typeof AudioContext;
 
@@ -32,10 +33,16 @@ export class DriftAudioEngine {
       this.ctx = new Ctor();
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0;
+      const limiter = this.ctx.createDynamicsCompressor();
+      limiter.threshold.value = -6;
+      limiter.knee.value = 6;
+      limiter.ratio.value = 12;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.25;
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 128;
       this.analyserData = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
-      this.masterGain.connect(this.analyser);
+      this.masterGain.connect(limiter).connect(this.analyser);
       this.analyser.connect(this.ctx.destination);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
@@ -145,46 +152,15 @@ export class DriftAudioEngine {
     delete this.active[id];
   }
 
-  private createNoiseBuffer(seconds: number, type: 'white' | 'pink' | 'brown'): AudioBuffer {
+  private createNoiseBuffer(seconds: number, type: NoiseType): AudioBuffer {
     const ctx = this.ctx!;
     const len = Math.floor(ctx.sampleRate * seconds);
     const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    if (type === 'white') {
-      for (let i = 0; i < len; i += 1) data[i] = Math.random() * 2 - 1;
-    } else if (type === 'pink') {
-      let b0 = 0;
-      let b1 = 0;
-      let b2 = 0;
-      let b3 = 0;
-      let b4 = 0;
-      let b5 = 0;
-      let b6 = 0;
-      for (let i = 0; i < len; i += 1) {
-        const w = Math.random() * 2 - 1;
-        b0 = 0.99886 * b0 + w * 0.0555179;
-        b1 = 0.99332 * b1 + w * 0.0750759;
-        b2 = 0.969 * b2 + w * 0.153852;
-        b3 = 0.8665 * b3 + w * 0.3104856;
-        b4 = 0.55 * b4 + w * 0.5329522;
-        b5 = -0.7616 * b5 - w * 0.016898;
-        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
-        b6 = w * 0.115926;
-      }
-    } else {
-      let last = 0;
-      for (let i = 0; i < len; i += 1) {
-        const w = Math.random() * 2 - 1;
-        const sample = ((last + 0.02 * w) / 1.02) * 3.5;
-        data[i] = sample;
-        last = sample;
-      }
-    }
+    fillNoise(buffer.getChannelData(0), type);
     return buffer;
   }
 
-  private noiseSource(type: 'white' | 'pink' | 'brown'): AudioBufferSourceNode {
+  private noiseSource(type: NoiseType): AudioBufferSourceNode {
     const src = this.ctx!.createBufferSource();
     src.buffer = this.createNoiseBuffer(4, type);
     src.loop = true;

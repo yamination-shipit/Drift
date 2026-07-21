@@ -4,10 +4,10 @@ export type StoragePort = Readonly<{
 }>;
 
 export const localStoragePort: StoragePort = {
-  async get(key) {
-    return window.localStorage.getItem(key);
+  get(key) {
+    return Promise.resolve().then(() => window.localStorage.getItem(key));
   },
-  async set(key, value) {
-    window.localStorage.setItem(key, value);
+  set(key, value) {
+    return Promise.resolve().then(() => window.localStorage.setItem(key, value));
   },
 };

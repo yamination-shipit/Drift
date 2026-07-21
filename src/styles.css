@@ -164,8 +164,24 @@ h1 {
     transform 0.15s ease;
 }
 
-.scene-card:active {
+.scene-card-toggle {
+  width: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.scene-card-toggle:active {
   transform: scale(0.98);
+}
+
+.scene-card-toggle:focus-visible {
+  outline: 2px solid var(--card-accent, var(--accent));
+  outline-offset: 4px;
 }
 
 .scene-card.active {

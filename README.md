@@ -11,10 +11,17 @@ The web build is deployed to GitHub Pages.
 corepack enable
 corepack prepare pnpm@11.15.1 --activate
 pnpm install
+pnpm exec playwright install --only-shell chromium
+pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:audio
 pnpm build
 ```
+
+## Device Audio Check
+
+Before releasing a native build, listen on phone speakers and headphones: start each built-in scene, combine several scenes, adjust their volumes, and verify clean fades, no clipping, and background playback.
 
 ## Run Native
 
@@ -43,8 +50,10 @@ pnpm cap run android --target <device-id>
 
 ```bash
 pnpm format:check
+pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:audio
 pnpm build
 pnpm build-storybook
 ```

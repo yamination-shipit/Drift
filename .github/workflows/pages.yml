@@ -24,9 +24,12 @@ jobs:
         with:
           version: 11.15.1
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
       - run: pnpm format:check
+      - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm test:audio
       - run: pnpm build
       - name: Deploy to gh-pages
         run: |

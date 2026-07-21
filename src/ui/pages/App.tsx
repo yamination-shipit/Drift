@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DriftAudioEngine } from '../../audio/DriftAudioEngine';
 import { parseSavedMixes, serializeSavedMixes, type SavedMix } from '../../domain/mixes';
 import {
@@ -18,9 +18,9 @@ const MIX_KEY = 'drift-mixes';
 const PRESETS = [15, 30, 45, 60, 90, 120] as const;
 
 export function App() {
-  const engineRef = useRef<DriftAudioEngine | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const [engine] = useState(() => new DriftAudioEngine());
   const [customScenes, setCustomScenes] = useState<readonly Scene[]>([]);
   const [activeIds, setActiveIds] = useState<readonly string[]>([]);
   const [volumes, setVolumes] = useState<Readonly<Record<string, number>>>(defaultVolumes);
@@ -36,11 +36,6 @@ export function App() {
   const [wakeChime, setWakeChime] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<string | null>(null);
 
-  const engine = useMemo(() => {
-    engineRef.current ??= new DriftAudioEngine();
-    return engineRef.current;
-  }, []);
-
   const scenes = useMemo(
     () => [...BASE_SCENES, ...customScenes] as readonly Scene[],
     [customScenes],
@@ -51,6 +46,31 @@ export function App() {
     activeScenes.length === 0
       ? 'Silence - pick a sound below'
       : activeScenes.map((scene) => scene.name).join(' + ');
+
+  const requestWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+    } catch {
+      // Wake Lock is opportunistic; audio still runs without it.
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(() => {
+    void wakeLockRef.current?.release();
+    wakeLockRef.current = null;
+  }, []);
+
+  const setPlaying = useCallback(
+    (value: boolean) => {
+      engine.ensureCtx();
+      engine.setPlaying(value, masterTarget);
+      setPlayingState(value);
+      if (value) void requestWakeLock();
+      else releaseWakeLock();
+    },
+    [engine, masterTarget, releaseWakeLock, requestWakeLock],
+  );
 
   useEffect(() => {
     void localStoragePort.get(MIX_KEY).then((value) => setSavedMixes(parseSavedMixes(value)));
@@ -71,7 +91,7 @@ export function App() {
       activeScenes.length > 0 ? new MediaMetadata({ title: nowPlaying, artist: 'Drift' }) : null;
     navigator.mediaSession.setActionHandler('play', () => setPlaying(true));
     navigator.mediaSession.setActionHandler('pause', () => setPlaying(false));
-  }, [activeScenes.length, nowPlaying, playing]);
+  }, [activeScenes.length, nowPlaying, playing, setPlaying]);
 
   useEffect(() => {
     let frame = 0;
@@ -109,29 +129,7 @@ export function App() {
       setCountdown(formatCountdown(remaining));
     }, 250);
     return () => window.clearInterval(interval);
-  }, [deadline, engine, fadeStarted, wakeChime]);
-
-  const requestWakeLock = async () => {
-    if (!('wakeLock' in navigator)) return;
-    try {
-      wakeLockRef.current = await navigator.wakeLock.request('screen');
-    } catch {
-      // Wake Lock is opportunistic; audio still runs without it.
-    }
-  };
-
-  const releaseWakeLock = () => {
-    void wakeLockRef.current?.release();
-    wakeLockRef.current = null;
-  };
-
-  const setPlaying = (value: boolean) => {
-    engine.ensureCtx();
-    engine.setPlaying(value, masterTarget);
-    setPlayingState(value);
-    if (value) void requestWakeLock();
-    else releaseWakeLock();
-  };
+  }, [deadline, engine, fadeStarted, setPlaying, wakeChime]);
 
   const toggleScene = (id: string) => {
     const nextIds = engine.toggleScene(id, volumes[id] ?? 0.7);
