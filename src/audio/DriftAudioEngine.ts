@@ -26,6 +26,7 @@ export class DriftAudioEngine {
   private analyserData: Uint8Array<ArrayBuffer> | null = null;
   private readonly active: Partial<Record<string, ActiveScene>> = {};
   private focusBeatHz = 6;
+  private detail = 0;
 
   ensureCtx(): void {
     if (!this.ctx) {
@@ -76,6 +77,10 @@ export class DriftAudioEngine {
   setFocusBeat(hz: number): void {
     this.focusBeatHz = hz;
     this.active.focus?.handle.setBeat?.(hz);
+  }
+
+  setDetail(detail: number): void {
+    this.detail = Math.max(-1, Math.min(1, detail));
   }
 
   addBufferScene(id: string, buffer: AudioBuffer): void {
@@ -225,6 +230,27 @@ export class DriftAudioEngine {
     };
   }
 
+  private detailDelay(baseMs: number, spreadMs: number): number {
+    return (baseMs + Math.random() * spreadMs) / (1 + this.detail * 0.45);
+  }
+
+  private playSteam(dest: AudioNode): void {
+    const now = this.ctx!.currentTime;
+    const src = this.ctx!.createBufferSource();
+    src.buffer = this.createNoiseBuffer(0.9, 'white');
+    const filter = this.ctx!.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 2400 + Math.random() * 1200;
+    filter.Q.value = 0.8;
+    const gain = this.ctx!.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.linearRampToValueAtTime(0.07, now + 0.12);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+    src.connect(filter).connect(gain).connect(dest);
+    src.start(now);
+    src.stop(now + 0.9);
+  }
+
   private readonly builders: Record<string, (out: AudioNode) => Handle> = {
     ocean: (out) => {
       const src = this.noiseSource('brown');
@@ -233,7 +259,7 @@ export class DriftAudioEngine {
       filter.frequency.value = 700;
       filter.Q.value = 0.7;
       const gain = this.ctx!.createGain();
-      gain.gain.value = 0;
+      gain.gain.value = 0.6;
       const lfo1 = this.ctx!.createOscillator();
       lfo1.frequency.value = 0.08;
       const lfo1Gain = this.ctx!.createGain();
@@ -243,13 +269,21 @@ export class DriftAudioEngine {
       lfo2.frequency.value = 0.06;
       const lfo2Gain = this.ctx!.createGain();
       lfo2Gain.gain.value = 0.28;
-      const base = this.ctx!.createConstantSource();
-      base.offset.value = 0.6;
       lfo2.connect(lfo2Gain).connect(gain.gain);
-      base.connect(gain.gain);
       src.connect(filter).connect(gain).connect(out);
-      [src, lfo1, lfo2, base].forEach((node) => node.start());
-      return { stop: () => [src, lfo1, lfo2, base].forEach((node) => this.tryStop(node)) };
+      [src, lfo1, lfo2].forEach((node) => node.start());
+      const loop = this.timedLoop(() => {
+        this.playChirp(out);
+        if (Math.random() < 0.3 + this.detail * 0.2)
+          window.setTimeout(() => this.playChirp(out), 180 + Math.random() * 280);
+        return this.detailDelay(16_000, 28_000);
+      }, 8_000);
+      return {
+        stop: () => {
+          [src, lfo1, lfo2].forEach((node) => this.tryStop(node));
+          loop.stop();
+        },
+      };
     },
     rain: (out) => {
       const src = this.noiseSource('white');
@@ -267,7 +301,7 @@ export class DriftAudioEngine {
       src.start();
       const loop = this.timedLoop(() => {
         this.playPercussive(out, { freqMin: 1800, freqMax: 3500, q: 12, peak: 0.1, dur: 0.1 });
-        return 400 + Math.random() * 1400;
+        return this.detailDelay(400, 1400);
       }, 500);
       return { stop: () => (this.tryStop(src), loop.stop()) };
     },
@@ -284,7 +318,7 @@ export class DriftAudioEngine {
         this.playChirp(out);
         if (Math.random() < 0.4)
           window.setTimeout(() => this.playChirp(out), 150 + Math.random() * 250);
-        return 3500 + Math.random() * 8500;
+        return this.detailDelay(3500, 8500);
       }, 2500);
       return { stop: () => (this.tryStop(src), loop.stop()) };
     },
@@ -300,7 +334,8 @@ export class DriftAudioEngine {
       src.start();
       const loop = this.timedLoop(() => {
         this.playPercussive(out, { freqMin: 2500, freqMax: 6000, q: 10, peak: 0.16, dur: 0.12 });
-        return 1500 + Math.random() * 4000;
+        if (Math.random() < 0.22 + this.detail * 0.12) this.playSteam(out);
+        return this.detailDelay(7_000, 14_000);
       }, 1200);
       return { stop: () => (this.tryStop(src), loop.stop()) };
     },
@@ -315,7 +350,7 @@ export class DriftAudioEngine {
       src.start();
       const loop = this.timedLoop(() => {
         this.playPercussive(out, { freqMin: 600, freqMax: 3200, q: 9, peak: 0.2, dur: 0.07 });
-        return 150 + Math.random() * 500;
+        return this.detailDelay(150, 500);
       }, 300);
       return { stop: () => (this.tryStop(src), loop.stop()) };
     },
@@ -325,18 +360,15 @@ export class DriftAudioEngine {
       lp.type = 'lowpass';
       lp.frequency.value = 3500;
       const gain = this.ctx!.createGain();
-      gain.gain.value = 0;
+      gain.gain.value = 0.22;
       const lfo = this.ctx!.createOscillator();
       lfo.frequency.value = 3.2;
       const lfoGain = this.ctx!.createGain();
       lfoGain.gain.value = 0.03;
-      const base = this.ctx!.createConstantSource();
-      base.offset.value = 0.22;
       lfo.connect(lfoGain).connect(gain.gain);
-      base.connect(gain.gain);
       src.connect(lp).connect(gain).connect(out);
-      [src, lfo, base].forEach((node) => node.start());
-      return { stop: () => [src, lfo, base].forEach((node) => this.tryStop(node)) };
+      [src, lfo].forEach((node) => node.start());
+      return { stop: () => [src, lfo].forEach((node) => this.tryStop(node)) };
     },
     focus: (out) => {
       const carrier = 200;

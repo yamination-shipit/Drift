@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { DriftAudioEngine } from '../../audio/DriftAudioEngine';
 import { parseSavedMixes, serializeSavedMixes, type SavedMix } from '../../domain/mixes';
 import {
@@ -35,6 +35,7 @@ export function App() {
   const [fadeStarted, setFadeStarted] = useState(false);
   const [wakeChime, setWakeChime] = useState(false);
   const [selectedTimer, setSelectedTimer] = useState<string | null>(null);
+  const [orb, setOrb] = useState({ x: 0, y: 0 });
 
   const scenes = useMemo(
     () => [...BASE_SCENES, ...customScenes] as readonly Scene[],
@@ -98,9 +99,7 @@ export function App() {
     const animate = () => {
       frame = window.requestAnimationFrame(animate);
       const scale = playing ? engine.amplitudeScale() : 1;
-      document
-        .getElementById('orbCore')
-        ?.style.setProperty('transform', `scale(${scale.toFixed(3)})`);
+      document.getElementById('orbCore')?.style.setProperty('--orb-pulse', scale.toFixed(3));
     };
     animate();
     return () => window.cancelAnimationFrame(frame);
@@ -141,6 +140,19 @@ export function App() {
     setVolumes((current) => ({ ...current, [id]: volume }));
     engine.setSceneVolume(id, volume);
   };
+
+  const setOrbPosition = useCallback(
+    (x: number, y: number) => {
+      const nextX = Math.max(-1, Math.min(1, x));
+      const nextY = Math.max(-1, Math.min(1, y));
+      const volume = 0.2 + ((1 - nextY) / 2) * 0.8;
+      setOrb({ x: nextX, y: nextY });
+      setMasterTarget(volume);
+      engine.setDetail(nextX);
+      if (playing) engine.setPlaying(true, volume);
+    },
+    [engine, playing],
+  );
 
   const saveMix = () => {
     if (activeIds.length === 0) {
@@ -212,11 +224,50 @@ export function App() {
       </p>
 
       <section className="orb-wrap" aria-live="polite">
-        <div className="orb-stage">
+        <div
+          className="orb-stage orb-control"
+          role="slider"
+          tabIndex={0}
+          aria-label="Soundscape feel: drag up for louder, right for livelier details"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(masterTarget * 100)}
+          aria-valuetext={`${Math.round(masterTarget * 100)}% volume, ${orb.x > 0 ? 'lively' : orb.x < 0 ? 'calm' : 'balanced'}`}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            const rect = event.currentTarget.getBoundingClientRect();
+            setOrbPosition(
+              ((event.clientX - rect.left) / rect.width) * 2 - 1,
+              ((event.clientY - rect.top) / rect.height) * 2 - 1,
+            );
+          }}
+          onPointerMove={(event) => {
+            if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            setOrbPosition(
+              ((event.clientX - rect.left) / rect.width) * 2 - 1,
+              ((event.clientY - rect.top) / rect.height) * 2 - 1,
+            );
+          }}
+          onKeyDown={(event) => {
+            const step = event.shiftKey ? 0.2 : 0.1;
+            if (event.key === 'ArrowLeft') setOrbPosition(orb.x - step, orb.y);
+            else if (event.key === 'ArrowRight') setOrbPosition(orb.x + step, orb.y);
+            else if (event.key === 'ArrowUp') setOrbPosition(orb.x, orb.y - step);
+            else if (event.key === 'ArrowDown') setOrbPosition(orb.x, orb.y + step);
+            else return;
+            event.preventDefault();
+          }}
+        >
           <div className="orb-ring r2" />
           <div className="orb-ring r1" />
-          <div className="orb-core" id="orbCore" />
+          <div
+            className="orb-core"
+            id="orbCore"
+            style={{ '--orb-x': `${orb.x * 38}px`, '--orb-y': `${orb.y * 38}px` } as CSSProperties}
+          />
         </div>
+        <div className="orb-hint">Drag ↑ louder · → livelier</div>
         <div className="now-playing">
           {activeScenes.length === 0 ? (
             nowPlaying

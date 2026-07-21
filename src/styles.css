@@ -91,6 +91,21 @@ h1 {
   justify-content: center;
 }
 
+.orb-control {
+  cursor: grab;
+  touch-action: none;
+}
+
+.orb-control:active {
+  cursor: grabbing;
+}
+
+.orb-control:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 50%;
+}
+
 .orb-ring {
   position: absolute;
   inset: 0;
@@ -108,6 +123,9 @@ h1 {
 }
 
 .orb-core {
+  --orb-x: 0px;
+  --orb-y: 0px;
+  --orb-pulse: 1;
   width: 108px;
   height: 108px;
   border-radius: 50%;
@@ -118,10 +136,16 @@ h1 {
     rgba(0, 0, 0, 0.2) 100%
   );
   box-shadow: 0 0 40px 6px var(--accent-soft);
-  transform: scale(1);
+  transform: translate(var(--orb-x), var(--orb-y)) scale(var(--orb-pulse));
   transition:
     background 0.6s ease,
     box-shadow 0.15s linear;
+}
+
+.orb-hint {
+  color: var(--ink-2);
+  font-size: 11px;
+  margin-top: 10px;
 }
 
 .now-playing {
